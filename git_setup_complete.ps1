@@ -90,6 +90,24 @@ function Setup-GitHubSSH {
 # INÍCIO DO SCRIPT PRINCIPAL
 # ==============================
 
+# 0. Localizar projeto
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "    LOCALIZAÇÃO DO PROJETO" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+$projectPath = Read-Host "Onde está o projeto que você quer enviar para o Git? (caminho completo)"
+
+if (-not (Test-Path $projectPath)) {
+    Write-Host "❌ Caminho não encontrado: $projectPath" -ForegroundColor Red
+    Read-Host "Pressione Enter para sair"
+    exit
+}
+
+Set-Location $projectPath
+Write-Host "✅ Navegado para: $projectPath" -ForegroundColor Green
+Write-Host ""
+
 # 1. Verificar se existe chave SSH
 $sshKeyPath = "$env:USERPROFILE\.ssh\id_ed25519"
 if (-not (Test-Path $sshKeyPath)) {
