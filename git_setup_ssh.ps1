@@ -58,7 +58,12 @@ Write-Host ""
 
 # Informações do repositório GitHub
 $githubUser = Read-Host "Digite seu usuário do GitHub"
-$repoName = Read-Host "Digite o nome do repositório no GitHub"
+
+# Sugerir nome da pasta atual como padrão
+$currentFolder = Split-Path -Leaf (Get-Location)
+$repoNamePrompt = "Digite o nome do repositório no GitHub (ou Enter para '$currentFolder')"
+$repoName = Read-Host $repoNamePrompt
+if (-not $repoName) { $repoName = $currentFolder }
 Write-Host ""
 
 # Perguntar se repositório já existe
