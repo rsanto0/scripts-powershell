@@ -176,8 +176,15 @@ if ($repoExists -ne 's' -and $repoExists -ne 'S') {
     # Repositório não existe - criar via API
     Write-Host ""
     Write-Host "📝 Criando repositório no GitHub..." -ForegroundColor Yellow
-    $githubToken = Read-Host "Digite seu Personal Access Token do GitHub" -AsSecureString
-    $token = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($githubToken))
+    
+    # Verificar se existe token na variável de ambiente
+    if ($env:GITHUB_TOKEN) {
+        $token = $env:GITHUB_TOKEN
+        Write-Host "✅ Usando token da variável de ambiente GITHUB_TOKEN" -ForegroundColor Green
+    } else {
+        $githubToken = Read-Host "Digite seu Personal Access Token do GitHub" -AsSecureString
+        $token = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($githubToken))
+    }
     
     # Criar repositório via API
     $body = @{
