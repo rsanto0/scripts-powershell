@@ -55,15 +55,29 @@ jobs:
           COLLECTION_UID="${{ secrets.COLLECTION_UID }}"
           echo "📋 Usando COLLECTION_UID dos secrets: $COLLECTION_UID"
           
-          # Atualiza collection existente
-          echo "📝 Atualizando collection existente..."
-          curl -X PUT \
+          # Tenta atualizar collection existente
+          echo "📝 Tentando atualizar collection existente..."
+          if curl -X PUT \
             "https://api.getpostman.com/collections/$COLLECTION_UID" \
             -H "X-API-Key: $POSTMAN_API_KEY" \
             -H "Content-Type: application/json" \
             -d @wrapped_collection.json \
-            --fail-with-body
-          echo "✅ Collection atualizada com sucesso!"
+            --fail-with-body; then
+            echo "✅ Collection atualizada com sucesso!"
+          else
+            echo "⚠️ Collection não encontrada - criando nova..."
+            RESPONSE=$(curl -X POST \
+              "https://api.getpostman.com/collections" \
+              -H "X-API-Key: $POSTMAN_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d @wrapped_collection.json \
+              --fail-with-body)
+            
+            NEW_ID=$(echo "$RESPONSE" | jq -r '.collection.id // .collection.uid')
+            echo "✅ Nova collection criada com ID: $NEW_ID"
+            echo "📋 COLLECTION_UID: $NEW_ID"
+            echo "⚠️ Atualize o secret COLLECTION_UID para: $NEW_ID"
+          fi
           
         else
           
