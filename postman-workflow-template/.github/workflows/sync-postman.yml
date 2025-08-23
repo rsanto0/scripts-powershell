@@ -1,0 +1,73 @@
+name: Sync Postman Collection
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**/*-postman.json'
+  workflow_dispatch:
+
+jobs:
+  sync-postman:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Find Postman Collection
+      id: find-collection
+      run: |
+        COLLECTION=$(find . -name "*-postman.json" | head -1)
+        if [ -z "$COLLECTION" ]; then
+          echo "❌ Nenhuma collection *-postman.json encontrada"
+          exit 1
+        fi
+        echo "collection=$COLLECTION" >> $GITHUB_OUTPUT
+        echo "✅ Collection encontrada: $COLLECTION"
+        
+    - name: Sync Postman Collection
+      env:
+        POSTMAN_API_KEY: ${{ secrets.POSTMAN_API_KEY }}
+        COLLECTION_FILE: ${{ steps.find-collection.outputs.collection }}
+      run: |
+        # Extrai collection ID do arquivo
+        COLLECTION_ID=$(jq -r '.info.uid // .info._postman_id' "$COLLECTION_FILE")
+        COLLECTION_NAME=$(jq -r '.info.name' "$COLLECTION_FILE")
+        
+        echo "Collection ID encontrado: $COLLECTION_ID"
+        echo "Collection Name: $COLLECTION_NAME"
+        
+        # Verifica se collection existe no Postman
+        if curl -s -H "X-API-Key: $POSTMAN_API_KEY" \
+           "https://api.getpostman.com/collections/$COLLECTION_ID" \
+           | jq -e '.collection' > /dev/null 2>&1; then
+          
+          echo "📝 Collection existe - atualizando..."
+          curl -X PUT \
+            "https://api.getpostman.com/collections/$COLLECTION_ID" \
+            -H "X-API-Key: $POSTMAN_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @"$COLLECTION_FILE" \
+            --fail-with-body
+          echo "✅ Collection atualizada com sucesso!"
+          
+        else
+          
+          echo "🆕 Collection não existe - criando nova..."
+          RESPONSE=$(curl -X POST \
+            "https://api.getpostman.com/collections" \
+            -H "X-API-Key: $POSTMAN_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d @"$COLLECTION_FILE" \
+            --fail-with-body)
+          
+          NEW_ID=$(echo "$RESPONSE" | jq -r '.collection.id // .collection.uid')
+          echo "✅ Collection criada com ID: $NEW_ID"
+          
+          # Atualiza o arquivo local com o novo ID
+          jq ".info._postman_id = \"$NEW_ID\"" "$COLLECTION_FILE" > temp.json
+          mv temp.json "$COLLECTION_FILE"
+          echo "📝 Arquivo local atualizado com novo ID"
+          
+        fi
